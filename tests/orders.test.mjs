@@ -52,3 +52,32 @@ test('orders function uses the orders deployment and verifies its confirmation',
   send.mock.mockImplementation(async()=>Response.json({ok:true,id:'wrong'}))
   assert.equal((await orders(req())).status,502)
 })
+
+test('misconfigured orders never reach Google and logs omit private values', async t => {
+  const url = 'https://script.google.com/macros/s/private-deployment/exec'
+  const secret = 'private-test-secret'
+  const logs = []
+  t.mock.method(console, 'error', message => logs.push(message))
+  const send = t.mock.method(globalThis, 'fetch', async target => {
+    assert.equal(target, url)
+    return Response.json({ok:true,id:'test'})
+  })
+  const request = () => new Request('https://example.org/.netlify/functions/orders', {
+    method:'POST', body:JSON.stringify({id:'test'})
+  })
+  for (const [endpoint,token,setting] of [
+    ['',secret,'ORDERS_SCRIPT_URL'], [url+'/dev',secret,'ORDERS_SCRIPT_URL'], [url,'','ORDERS_SHARED_SECRET']
+  ]) {
+    process.env.ORDERS_SCRIPT_URL = endpoint
+    process.env.ORDERS_SHARED_SECRET = token
+    const response = await orders(request())
+    assert.equal(response.status,503)
+    assert.deepEqual(await response.json(), {ok:false,error:'configuration'})
+    assert.ok(logs.at(-1).includes(setting))
+  }
+  assert.equal(send.mock.callCount(),0)
+  assert.ok(!logs.join().includes(secret) && !logs.join().includes('private-deployment'))
+  process.env.ORDERS_SCRIPT_URL = ' '+url+' '
+  process.env.ORDERS_SHARED_SECRET = secret
+  assert.equal((await orders(request())).status,200)
+})

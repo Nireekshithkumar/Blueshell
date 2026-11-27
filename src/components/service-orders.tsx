@@ -44,7 +44,7 @@ function OrderForm({close}: {close: () => void}) {
   const dialog = useRef<HTMLDialogElement>(null)
   const busy = useRef(false)
   const receipt = useRef({key:'', id:''})
-  const [state, setState] = useState<'ready' | 'saving' | 'saved' | 'failed'>('ready')
+  const [state, setState] = useState<'ready' | 'saving' | 'saved' | 'failed' | 'unconfigured'>('ready')
   useEffect(() => {
     const el = dialog.current!
     el.showModal()
@@ -71,8 +71,13 @@ function OrderForm({close}: {close: () => void}) {
         method:'POST', headers:{'Content-Type':'application/json'}, credentials:'omit',
         body:JSON.stringify({...fields,id}), signal:AbortSignal.timeout(35000),
       })
-      if (!response.ok) throw new Error('Save failed')
       const result = await response.json()
+      if (response.status === 503 && result?.error === 'configuration') {
+        busy.current = false
+        setState('unconfigured')
+        return
+      }
+      if (!response.ok) throw new Error('Save failed')
       if (result.ok !== true || result.id !== id) throw new Error('Missing receipt')
       setState('saved')
     } catch {
@@ -92,6 +97,6 @@ function OrderForm({close}: {close: () => void}) {
       <label>Email<input name="email" type="email" required autoComplete="email" maxLength={320}/></label>
       <label>Tell us about your setup or requirements<textarea name="requirements" rows={3} maxLength={4000}/></label>
       <Button type="submit">{state === 'saving' ? 'Saving…' : 'Submit enquiry'}</Button>
-    </fieldset>{state === 'failed' && <p role="alert">We couldn’t confirm the save. Your details are here. Please try again.</p>}</form>}
+    </fieldset>{state === 'unconfigured' && <p role="alert">Ordering is temporarily unavailable. Your enquiry has not been sent. Your details are here so you can try again later.</p>}{state === 'failed' && <p role="alert">We couldn’t confirm the save. Your details are here. Please try again.</p>}</form>}
   </dialog>
 }
