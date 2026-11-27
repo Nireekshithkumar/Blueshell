@@ -9,3 +9,5 @@ The six tool photos and six original team portraits are bundled locally from the
 ## Training registrations
 
 Deploy the Google Sheets writer and client email notification, then configure the Netlify Function using [the registration setup guide](google-apps-script/README.md).
+
+See [service orders setup](google-apps-script/orders/README.md) to activate the Services enquiry form.

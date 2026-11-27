@@ -1,0 +1,7 @@
+.service-orders { margin-top:clamp(48px,7vw,96px); text-align:center; }
+.service-orders > p { margin-inline:auto; }
+.service-orders > .order-trigger { background-color:#183940; margin-block:24px 44px; }
+.service-orders > h3 { margin-bottom:12px; }
+.order-dialog { text-align:left; }
+.order-dialog textarea { display:block; width:100%; padding:12px; margin-top:5px; resize:vertical; border:1px solid #aabbb8; border-radius:10px; background:white; }
+.order-dialog code { overflow-wrap:anywhere; }
