@@ -76,14 +76,14 @@ test('legacy receipts are preserved and do not trigger a historical email blast'
   b.rows[1][7]='Pending';b.retry()
   assert.equal(b.emails.length,1);assert.equal(b.rows.length,2)
 })
-test('Netlify forwards privately, confirms a matching receipt, and rejects unconfirmed upstream responses', async t=>{
-  const {default:register}=await import('../netlify/functions/register.mjs')
+test('Vercel forwards privately, confirms a matching receipt, and rejects unconfirmed upstream responses', async t=>{
+  const {default:{fetch:register}}=await import('../api/register.js')
   process.env.REGISTRATION_SCRIPT_URL='https://script.google.com/macros/s/test/exec'
   process.env.REGISTRATION_SHARED_SECRET='server-token'
-  const request=()=>new Request('https://example.org/.netlify/functions/register',{method:'POST',body:JSON.stringify(data)})
+  const request=()=>new Request('https://example.org/api/register',{method:'POST',body:JSON.stringify(data)})
   t.mock.method(globalThis,'fetch',async(url,options)=>{
     assert.equal(url,process.env.REGISTRATION_SCRIPT_URL)
-    assert.equal(JSON.parse(options.body).token,'server-token')
+    assert.deepEqual(JSON.parse(options.body), {...data, token:'server-token'})
     return Response.json({ok:true,id:data.id})
   })
   assert.deepEqual(await (await register(request())).json(),{ok:true,id:data.id})

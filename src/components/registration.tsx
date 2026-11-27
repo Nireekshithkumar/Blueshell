@@ -32,7 +32,7 @@ export function Registration({days, fee, onClose}: {days: number; fee: number; o
         receipt.current = {fingerprint, id}
       }
       const { id } = receipt.current
-      const response = await fetch('/.netlify/functions/register', {
+      const response = await fetch('/api/register', {
         method: 'POST', headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({...fields, id}), signal: controller.signal, credentials: 'omit',
       })

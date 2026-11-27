@@ -1,4 +1,4 @@
-export default async function register(request) {
+async function register(request) {
   const json = (body, status) => Response.json(body, {status, headers: {'Cache-Control': 'no-store'}})
   if (request.method !== 'POST') return json({ok: false}, 405)
   const endpoint = process.env.REGISTRATION_SCRIPT_URL
@@ -22,3 +22,5 @@ export default async function register(request) {
     return json({ok: false}, receipt.error === 'invalid' ? 400 : receipt.error === 'conflict' ? 409 : 502)
   } catch { return json({ok: false}, 502) }
 }
+
+export default { fetch: register }
