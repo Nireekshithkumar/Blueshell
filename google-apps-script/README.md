@@ -1,30 +1,36 @@
-﻿# Connect training registration
+﻿# BlueShells registration on Netlify
 
-## Google account and web app
+The form posts to /.netlify/functions/register on the same origin. The function calls Google Apps Script on the server. Visitors never receive the Google authorization, shared secret or script URL. The previous Netlify bundle threw Missing deployment URL before sending a request. The separate Contact BlueShells footer link opens email.
 
-1. Sign in with an account that can edit the target sheet. Open https://docs.google.com/spreadsheets/d/1wl5FXLawJoJLh81PQDXhWhUcEJOW5tM30qyVb3OOuYQ/edit#gid=0 . Under Share, keep General access set to Restricted. Visitors only call the write endpoint.
-2. In the spreadsheet choose Extensions > Apps Script. In a new script project copy Code.gs from this directory into the script editor and save. If an existing script already handles this sheet, create a separate project at script.google.com instead of replacing existing code. Use a single deployed writer for this form.
-3. Beside Services click +, choose Google Sheets API (v4), and add it with identifier Sheets. For a standard Google Cloud project also enable Google Sheets API under APIs & Services in the linked Cloud project. The default Apps Script Cloud project enables it when you add the service.
-4. Choose Deploy > New deployment > Select type > Web app. Set Execute as to Me and Who has access to Anyone (including signed-out visitors). Click Deploy, review permissions and authorize spreadsheet access as the editor. Copy the Web app URL ending in /exec. If your Workspace administrator disallows anonymous web apps, the admin must permit public endpoint access or an alternative server must be deployed. Keep the sheet itself restricted.
-5. A blank tab with numeric ID 0 gets headings with its first successful registration. On a populated tab the writer maps the following exact column names in row 1, in any order. Add missing column labels in unused columns or rename matching headings yourself before enabling the form. Existing rows are preserved.
+## Google setup
 
-   Submitted at (IST) | Name | Phone | Email | Training (days) | Fee (INR) | Registration ID
+1. Open [the spreadsheet, tab 0](https://docs.google.com/spreadsheets/d/1wl5FXLawJoJLh81PQDXhWhUcEJOW5tM30qyVb3OOuYQ/edit#gid=0) as an editor. Keep **Share > General access > Restricted**. To check older attempts, search this tab for the submitted email, programme and approximate time before testing again.
+2. Open **Extensions > Apps Script**. Replace the previous BlueShells writer with [Code.gs](Code.gs) in its existing project, or create a new project if installing for the first time. Save. Under **Services > +** add **Google Sheets API**, v4, identifier **Sheets**. For a standard Google Cloud project also enable the Google Sheets API in that project's API Library.
+3. In **Project Settings > Script properties** add **REGISTRATION_SHARED_SECRET**. Generate a random 32-byte or longer value using a password manager and keep it for Netlify. The default notification recipient is blueshells.team@gmail.com from the original registration form. To override it privately, add **REGISTRATION_RECIPIENT** here. Never put either value in Vite variables.
+4. In the editor select **checkRegistrationSetup > Run** and authorize spreadsheet access and sending email as the client's chosen Google account. The check looks up the sheet and mail quota without writing a row or sending a message.
+5. For an existing deployment, use **Deploy > Manage deployments > Edit > New version > Deploy**. For a new one use **Deploy > New deployment > Web app**. Choose **Execute as: Me**, **Who has access: Anyone**, then copy the web app URL ending in **/exec**. Requests must also pass the server-side secret. If the organization blocks anonymous web apps, ask its administrator to allow this setup. Retire previous unauthenticated BlueShells deployments if still active.
+6. Choose **Triggers > Add Trigger**. Select **retryClientNotifications**, deployment **Head**, event source **Time-driven**, **Minutes timer**, **Every 10 minutes**, then save. This retries pending and failed notifications in batches of ten without inserting registrations. The editor can also run the function on demand.
 
-The deployment URL is public and grants the ability to submit. The web app exposes no sheet-reading endpoint. App Script quotas apply. For script updates use Deploy > Manage deployments > Edit > New version so the URL stays the same.
+## Netlify setup
 
-## Deploy the frontend
+1. Open the existing **blueshell** Netlify project. Under **Project configuration > Build & deploy > Continuous deployment** ensure the linked repository is Nireekshithkumar/Blueshell and production branch is main. If this was a manual drag-and-drop site, link the repository so Functions deploy alongside the frontend. Use repository root as base, npm run build as command, dist as publish directory and netlify/functions as functions directory (netlify.toml supplies these).
+2. Under **Project configuration > Environment variables** add **REGISTRATION_SCRIPT_URL** = the Google web app /exec URL and **REGISTRATION_SHARED_SECRET** = the exact same secret as the Google script property. Apply both to the **Production** context with **Functions** scope (or all scopes). Remove the obsolete VITE_REGISTRATION_ENDPOINT build variable. Do not add a VITE_ prefix to server settings.
+3. In **Deploys > Trigger deploy > Deploy project**, deploy main and wait for Published. Confirm **register** appears among the deployed Functions. Repeat the deploy after changing Netlify environment settings. For local integration use Netlify Dev with the same server variables; standalone Vite serves only the frontend.
 
-1. On GitHub open Nireekshithkumar/Blueshell > Settings > Secrets and variables > Actions > Variables > New repository variable. Name it VITE_REGISTRATION_ENDPOINT and paste the /exec URL as its value.
-2. Under Settings > Pages > Build and deployment > Source select GitHub Actions.
-3. Under Actions choose Deploy BlueShells to Pages > Run workflow > main > Run workflow. Open the github-pages environment URL after the run succeeds. Repeat this build when the endpoint changes.
-4. For local development set VITE_REGISTRATION_ENDPOINT in .env.local and restart Vite. On another static host set the same build variable, run npm run build and publish dist. Only the endpoint URL belongs in Vite variables.
+## Sheet and notification behavior
 
-## Verify one registration
+* A blank tab receives Submitted at (IST), Name, Phone, Email, Training (days), Fee (INR), Registration ID and Client email status. On an existing tab the first seven labels must exist exactly once in row 1, in any order. If needed, map your existing headings before enabling intake. The script adds only the status column to a compatible legacy tab.
+* Phones and other user text are written as RAW strings. Fees are derived server-side. A script lock and stored receipt guard browser retries. A receipt is reused for the same fields within the same browser tab. A new session may submit a new registration.
+* After a committed row, a mail error leaves the registration successful and records Failed. Fix the recipient, access or quota, then run retryClientNotifications. **Sent** means Google accepted the dispatch; check inbox and spam for delivery. Historical rows with blank status are left alone. To notify about an existing verified registration, mark its Client email status Pending and run the retry function.
+* **Sending** after an interrupted execution is ambiguous since email and Sheets cannot commit atomically. Check Apps Script Executions and the client's inbox for the registration ID before marking that row Sent or Pending. Automatic retries skip Sending to avoid a duplicate email.
+* Export from **File > Download > Microsoft Excel (.xlsx)** in Google Sheets.
 
-Open the deployed site in a signed-out/private browser. Select the 7-day plan. Use a recognizable test name, a test phone starting with +91 and an email address you control. Click Submit twice quickly. Wait for the saved message, then open tab 0 as the owner. Confirm exactly one new row, the entered phone with +91, 7 days, numeric fee 5000, an India-time timestamp and a registration ID. The 15- and 30-day plans use 10000 and 20000 respectively.
+## Verify one deployment
 
-To exercise recovery with the same test, switch the browser offline before the first submission. Confirm the error and retained entries, go online, then submit. Identical retries within the tab reuse the same receipt, including after a refresh if session storage is available. A separate browser session can intentionally submit a new registration. No response, HTML sign-in page, or unmatched receipt counts as success.
+In a private browser window visit https://blueshell.netlify.app/#training. Select the 7-day plan, enter a unique test name, an email you control and a phone starting with +91. Click Submit twice quickly. Confirm **Registration successful**, one new row with the exact phone, 7, 5000, an IST timestamp and a registration ID, and one email in the client's inbox containing that ID. No visit to Gmail is required for the registrant.
 
-If the browser reports a network/CORS error, verify anonymous access, the /exec URL, and that the latest web-app version is deployed. Check Apps Script > Executions, the enabled Sheets service, tab ID and header spelling. The frontend uses a simple POST and follows Google's response redirect.
+For diagnosis, browser Network should show POST /.netlify/functions/register and JSON with ok: true and a matching id on success. No POST plus Missing deployment URL indicates the old bundle. A 404 suggests the function wasn't deployed, 503 configuration means a missing/invalid Netlify setting, and 502 requires checking Google deployment access, secret, headings or Apps Script Executions. Reuse the same form on an uncertain result.
 
-Google documentation: [Web apps](https://developers.google.com/apps-script/guides/web), [Advanced services](https://developers.google.com/apps-script/guides/services/advanced), [Content Service redirects](https://developers.google.com/apps-script/guides/content).
+Local checks: node --test tests/registration.test.mjs and npm run build.
+
+[Netlify function environment settings](https://docs.netlify.com/build/functions/environment-variables/) | [Apps Script web apps](https://developers.google.com/apps-script/guides/web) | [Google MailApp](https://developers.google.com/apps-script/reference/mail/mail-app)

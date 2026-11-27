@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { ArrowUpRight, X } from 'lucide-react'
 import { Button } from './ui/button'
 
@@ -6,7 +6,7 @@ export function Registration({days, fee, onClose}: {days: number; fee: number; o
   const dialog = useRef<HTMLDialogElement>(null)
   const locked = useRef(false)
   const receipt = useRef({ fingerprint: '', id: '' })
-  const [state, setState] = useState<'ready' | 'saving' | 'saved' | 'failed'>('ready')
+  const [state, setState] = useState<'ready' | 'saving' | 'saved' | 'failed' | 'unconfigured'>('ready')
   useEffect(() => {
     const el = dialog.current!
     el.showModal()
@@ -23,8 +23,6 @@ export function Registration({days, fee, onClose}: {days: number; fee: number; o
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 35000)
     try {
-      const endpoint = import.meta.env.VITE_REGISTRATION_ENDPOINT
-      if (!endpoint) throw new Error('Missing deployment URL')
       const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(fields)))
       const fingerprint = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('')
       const storageKey = 'blueshells-registration-' + fingerprint
@@ -34,10 +32,15 @@ export function Registration({days, fee, onClose}: {days: number; fee: number; o
         receipt.current = {fingerprint, id}
       }
       const { id } = receipt.current
-      const response = await fetch(endpoint, {
-        method: 'POST', headers: {'Content-Type': 'text/plain;charset=UTF-8'},
+      const response = await fetch('/.netlify/functions/register', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({...fields, id}), signal: controller.signal, credentials: 'omit',
       })
+      if (response.status === 503 && (await response.clone().json()).error === 'configuration') {
+        locked.current = false
+        setState('unconfigured')
+        return
+      }
       if (!response.ok) throw new Error('Save failed')
       const result = await response.json()
       if (result.ok !== true || result.id !== id) throw new Error('Missing receipt')
@@ -66,7 +69,8 @@ export function Registration({days, fee, onClose}: {days: number; fee: number; o
         <Button type="submit">{state === 'saving' ? 'Saving…' : state === 'saved' ? 'Saved' : 'Submit'} <ArrowUpRight size={16}/></Button>
       </fieldset>
     </form>
-    {state === 'saved' && <p role="status">Your training registration has been saved.</p>}
-    {state === 'failed' && <p role="alert">We couldn’t confirm your registration. Your entries are here. Please try Submit again.</p>}
+    {state === 'saved' && <p role="status">Registration successful</p>}
+    {state === 'failed' && <p role="alert">We couldn't confirm your registration. Your entries are here. Please try Submit again.</p>}
+    {state === 'unconfigured' && <p role="alert">Registration is temporarily unavailable. The site administrator needs to configure the registration service.</p>}
   </dialog>
 }
