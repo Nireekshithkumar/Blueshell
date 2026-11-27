@@ -6,6 +6,7 @@ import { Button } from './ui/button'
 import './service-orders.css'
 
 const service = 'Whole system setup'
+const headline = 'Plan your tank setup.'
 
 export function ServiceOrders() {
   const [open, setOpen] = useState(false)
@@ -26,14 +27,13 @@ export function ServiceOrders() {
       <img src="assets/system-setup.webp" alt="Freshwater mussels in the BlueShells setup tank" width="960" height="1280" loading="lazy" />
     </div>
     <div className="setup-copy">
-      <span className="kicker">Services</span>
-      <h2 className="setup-title" aria-label={service}>
-        {service.split(' ').map((word, index) => <span className="setup-word" aria-hidden="true" key={word}>
+      <h2 className="setup-title" aria-label={headline}>
+        {headline.split(' ').map((word, index) => <span className="setup-word" aria-hidden="true" key={word}>
           {Array.from(word, (letter, i) => <span className="setup-letter" key={i}
             style={{ '--delay': (index * 140 + i * 32) + 'ms' } as CSSProperties}>{letter}</span>)}
         </span>)}
       </h2>
-      <p>Bring monitoring and automation together for your freshwater pearl farm. Our team assembles the system, calibrates the sensors, and helps you get set up.</p>
+      <p>Starting a new tank or upgrading an existing one? Tell us what you have and where you need help.</p>
       <SpecularButton className="order-trigger" size="lg" followMouse={enabled} aria-haspopup="dialog" onClick={() => setOpen(true)}>ORDER NOW</SpecularButton>
     </div>
     {open && <OrderForm close={() => setOpen(false)} />}
