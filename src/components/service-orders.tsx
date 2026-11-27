@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 'react'
 import { X } from 'lucide-react'
 import SpecularButton from './ui/specular-button/SpecularButton'
 import { useMotionSettings } from './ui/motion-settings'
@@ -10,12 +10,32 @@ const service = 'Whole system setup'
 export function ServiceOrders() {
   const [open, setOpen] = useState(false)
   const { enabled } = useMotionSettings()
-  return <div className="service-orders">
-    <h2>Services</h2>
-    <p>Expert services powering the future of freshwater pearl farming.<br/>Expert care, monitoring, and guidance at every stage.</p>
-    <SpecularButton className="order-trigger" size="lg" followMouse={enabled} aria-haspopup="dialog" onClick={() => setOpen(true)}>ORDER NOW</SpecularButton>
-    <h3>{service}</h3>
-    <p>Full system integration engineered to automate monitoring, optimize water parameters, and protect your mussel yield 24/7.<br/>Full-scale system assembly, sensor calibration, and automated setup for high-yield pearl farming</p>
+  const panel = useRef<HTMLDivElement>(null)
+  const [entered, setEntered] = useState(false)
+  useEffect(() => {
+    if (!enabled || entered) return
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) { setEntered(true); observer.disconnect() }
+    }, { threshold: .15 })
+    observer.observe(panel.current!)
+    return () => observer.disconnect()
+  }, [enabled, entered])
+
+  return <div className="service-orders" id="system-setup" ref={panel} data-playing={enabled && entered}>
+    <div className="setup-photo">
+      <img src="assets/system-setup.webp" alt="Freshwater mussels in the BlueShells setup tank" width="960" height="1280" loading="lazy" />
+    </div>
+    <div className="setup-copy">
+      <span className="kicker">Services</span>
+      <h2 className="setup-title" aria-label={service}>
+        {service.split(' ').map((word, index) => <span className="setup-word" aria-hidden="true" key={word}>
+          {Array.from(word, (letter, i) => <span className="setup-letter" key={i}
+            style={{ '--delay': (index * 140 + i * 32) + 'ms' } as CSSProperties}>{letter}</span>)}
+        </span>)}
+      </h2>
+      <p>Bring monitoring and automation together for your freshwater pearl farm. Our team assembles the system, calibrates the sensors, and helps you get set up.</p>
+      <SpecularButton className="order-trigger" size="lg" followMouse={enabled} aria-haspopup="dialog" onClick={() => setOpen(true)}>ORDER NOW</SpecularButton>
+    </div>
     {open && <OrderForm close={() => setOpen(false)} />}
   </div>
 }
