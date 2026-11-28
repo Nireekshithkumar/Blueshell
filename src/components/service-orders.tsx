@@ -1,3 +1,4 @@
+import { emailDraft, openEmailDraft } from '../lib/email-draft'
 import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 'react'
 import { X } from 'lucide-react'
 import SpecularButton from './ui/specular-button/SpecularButton'
@@ -44,6 +45,7 @@ function OrderForm({close}: {close: () => void}) {
   const dialog = useRef<HTMLDialogElement>(null)
   const busy = useRef(false)
   const receipt = useRef({key:'', id:''})
+  const [draft, setDraft] = useState('')
   const [state, setState] = useState<'ready' | 'saving' | 'saved' | 'failed' | 'unconfigured'>('ready')
   useEffect(() => {
     const el = dialog.current!
@@ -79,7 +81,16 @@ function OrderForm({close}: {close: () => void}) {
       }
       if (!response.ok) throw new Error('Save failed')
       if (result.ok !== true || result.id !== id) throw new Error('Missing receipt')
+      const link = emailDraft(`BlueShells Order Enquiry – ${result.id}`, [
+        `Service: ${fields.service}`,
+        `Name: ${fields.name}`,
+        `Phone: ${fields.phone}`,
+        `Email: ${fields.email}`,
+        `Requirements: ${fields.requirements}`,
+      ])
+      setDraft(link)
       setState('saved')
+      openEmailDraft(link)
     } catch {
       busy.current = false
       setState('failed')
@@ -89,7 +100,7 @@ function OrderForm({close}: {close: () => void}) {
     onCancel={e => { if (state === 'saving') e.preventDefault(); else close() }}>
     <button type="button" aria-label="Close" className="close" disabled={state === 'saving'} onClick={close}><X/></button>
     <h2 id="order-heading">Service order enquiry</h2>
-    {state === 'saved' ? <p role="status"><strong>Enquiry received</strong><br/>Enquiry ID: <code>{receipt.current.id}</code></p> :
+    {state === 'saved' ? <><p role="status"><strong>Enquiry received</strong><br/>Enquiry ID: <code>{receipt.current.id}</code></p><a href={draft}>Open email draft</a></> :
     <form onSubmit={submit}><fieldset disabled={state === 'saving'}>
       <label>Service<input name="service" value={service} readOnly/></label>
       <label>Name<input name="name" required autoComplete="name" maxLength={200} autoFocus/></label>

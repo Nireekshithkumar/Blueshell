@@ -1,3 +1,4 @@
+const ORDERS_SPREADSHEET_ID = '1_DxAHzfWMGwlG3p_r2zEjzyhOpxu-zZOZ5-VAIsq7yM';
 const ORDER_HEADERS = ['Enquiry ID', 'Submitted at (IST)', 'Service', 'Name', 'Phone', 'Email', 'Requirements', 'Status'];
 
 function doPost(event) {
@@ -17,7 +18,7 @@ function doPost(event) {
     const fields = [input.service,input.name,input.phone,input.email,input.requirements].map(s => s.trim());
     lock = LockService.getScriptLock();
     lock.waitLock(20000);
-    const book = SpreadsheetApp.openById(settings.getProperty('ORDERS_SPREADSHEET_ID'));
+    const book = SpreadsheetApp.openById(ORDERS_SPREADSHEET_ID);
     const sheet = book.getSheetByName('Orders') || book.insertSheet('Orders');
     const last = sheet.getLastRow();
     const headers = last ? sheet.getRange(1,1,1,sheet.getLastColumn()).getDisplayValues()[0] : ORDER_HEADERS;
@@ -49,7 +50,7 @@ function reply(value) { return ContentService.createTextOutput(JSON.stringify(va
 function checkOrdersSetup() {
   const settings = PropertiesService.getScriptProperties();
   if (!settings.getProperty('ORDERS_SHARED_SECRET')) throw Error('Set ORDERS_SHARED_SECRET');
-  const book = SpreadsheetApp.openById(settings.getProperty('ORDERS_SPREADSHEET_ID'));
+  const book = SpreadsheetApp.openById(ORDERS_SPREADSHEET_ID);
   Sheets.Spreadsheets.get(book.getId(), {fields:'spreadsheetId'});
   console.log('Orders spreadsheet accessible');
 }

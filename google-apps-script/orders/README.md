@@ -1,8 +1,8 @@
 ﻿# Activate service order enquiries
 
-1. Open the intended spreadsheet as an editor, keep General access Restricted, and copy its ID (the part of the URL between /d/ and /edit).
+1. Open the intended spreadsheet as an editor, keep General access Restricted, and check its ID matches ORDERS_SPREADSHEET_ID in Code.gs.
 2. Create a **separate standalone project** at script.google.com for the Orders writer. Paste Code.gs from this directory into the editor and save. Keep the existing registration script and its deployment in place.
-3. In Project Settings > Script properties set ORDERS_SPREADSHEET_ID to that ID and ORDERS_SHARED_SECRET to a new random secret from a password manager (at least 32 bytes). Under Services > + add Google Sheets API v4 with identifier Sheets. If using a standard Cloud project, enable Google Sheets API in its API Library as well.
+3. In Project Settings > Script properties set ORDERS_SHARED_SECRET to a new random secret from a password manager (at least 32 bytes). Under Services > + add Google Sheets API v4 with identifier Sheets. If using a standard Cloud project, enable Google Sheets API in its API Library as well.
 4. Select checkOrdersSetup and click Run. Authorize access using an account with edit permission. This reads spreadsheet metadata without creating a test order.
 5. Deploy > New deployment > Web app. Execute as Me, access Anyone. Deploy and copy the web app URL ending in /exec. The writer checks the server token on each POST. Use Manage deployments > Edit > New version for updates. Use a single orders writer project to keep the duplicate-check lock shared.
 6. In the existing BlueShells Netlify project go to Project configuration > Environment variables. Set ORDERS_SCRIPT_URL to the Orders /exec URL and ORDERS_SHARED_SECRET to the matching secret, for Production with Functions scope (or all scopes). Keep both variables server-side. Leave REGISTRATION_SCRIPT_URL and REGISTRATION_SHARED_SECRET as configured. The repository build command is npm run build, output dist, functions netlify/functions.

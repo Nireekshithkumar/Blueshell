@@ -1,3 +1,4 @@
+import { emailDraft, openEmailDraft } from '../lib/email-draft'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { ArrowUpRight, X } from 'lucide-react'
 import { Button } from './ui/button'
@@ -6,6 +7,7 @@ export function Registration({days, fee, onClose}: {days: number; fee: number; o
   const dialog = useRef<HTMLDialogElement>(null)
   const locked = useRef(false)
   const receipt = useRef({ fingerprint: '', id: '' })
+  const [draft, setDraft] = useState('')
   const [state, setState] = useState<'ready' | 'saving' | 'saved' | 'failed' | 'unconfigured'>('ready')
   useEffect(() => {
     const el = dialog.current!
@@ -44,7 +46,16 @@ export function Registration({days, fee, onClose}: {days: number; fee: number; o
       if (!response.ok) throw new Error('Save failed')
       const result = await response.json()
       if (result.ok !== true || result.id !== id) throw new Error('Missing receipt')
+      const link = emailDraft(`BlueShells Training Registration – ${result.id}`, [
+        `Name: ${fields.name}`,
+        `Phone: ${fields.phone}`,
+        `Email: ${fields.email}`,
+        `Duration: ${days} days`,
+        `Fee: ₹${fee.toLocaleString('en-IN')}`,
+      ])
+      setDraft(link)
       setState('saved')
+      openEmailDraft(link)
     } catch {
       locked.current = false
       setState('failed')
@@ -69,7 +80,7 @@ export function Registration({days, fee, onClose}: {days: number; fee: number; o
         <Button type="submit">{state === 'saving' ? 'Saving…' : state === 'saved' ? 'Saved' : 'Submit'} <ArrowUpRight size={16}/></Button>
       </fieldset>
     </form>
-    {state === 'saved' && <p role="status">Registration successful</p>}
+    {state === 'saved' && <><p role="status"><strong>Registration successful</strong><br/>Registration ID: <code>{receipt.current.id}</code></p><a href={draft}>Open email draft</a></>}
     {state === 'failed' && <p role="alert">We couldn't confirm your registration. Your entries are here. Please try Submit again.</p>}
     {state === 'unconfigured' && <p role="alert">Registration is temporarily unavailable. The site administrator needs to configure the registration service.</p>}
   </dialog>
